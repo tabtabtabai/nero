@@ -8,6 +8,7 @@ Dockerized OpenCode for a VPS with:
 - OpenCode web UI exposed on a custom domain
 - built-in OpenCode HTTP basic auth for both the UI and API
 - persistent agent workspace mounted from the host
+- GitHub repo, PR, and gh CLI support inside the agent container
 - `zsh` and Oh My Zsh installed on fresh Ubuntu bootstrap
 - global `nero` command installed on the VM
 
@@ -57,6 +58,7 @@ nero/
    - model choice
    - auth method for the provider
    - provider API key only if you choose API-key auth
+   - GitHub integration and auth details
 5. Open `https://<your-domain>`
 6. If you chose OpenAI subscription auth, run `/connect` in OpenCode and select `OpenAI` -> `ChatGPT Plus/Pro`
 
@@ -66,6 +68,7 @@ The installer now also:
 - detects when ports `80/443` are already in use
 - skips Nero Traefik automatically on boxes that already have another proxy
 - installs the `nero` command into `/usr/local/bin/nero`
+- prepares `gh`, git identity, and SSH material for GitHub workflows
 
 ## Fresh Ubuntu 24 VM
 
@@ -82,7 +85,7 @@ The bootstrap script installs the host dependencies Nero expects:
 
 - Docker Engine
 - Docker Compose plugin
-- git, curl, rsync, nano, zsh
+- gh, git, curl, rsync, nano, zsh
 - Oh My Zsh for the invoking non-root user when available
 - UFW with `OpenSSH`, `80/tcp`, and `443/tcp` allowed
 
@@ -116,6 +119,26 @@ nero update
 
 - pulls the latest repo changes with `git pull --ff-only`
 - rebuilds and restarts Nero with the correct proxy mode
+
+## GitHub integration
+
+Nero can prepare GitHub access during install so the agent can clone repos,
+write branches, and create pull requests.
+
+The automated setup now:
+
+- installs `gh` on the host and in the agent container
+- prompts for git author name and email
+- optionally stores a GitHub token for API and `gh` access
+- writes a dedicated git config that uses `gh auth git-credential`
+- optionally generates an SSH keypair in `config/ssh/`
+
+Recommended path:
+
+- use a fine-grained GitHub token with repository and pull request access
+- let Nero generate an SSH key for SSH remotes
+
+After install, if you generated an SSH key, add the printed public key to GitHub.
 
 ## One-command install target
 

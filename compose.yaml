@@ -39,6 +39,7 @@ services:
     ports:
       - "127.0.0.1:${OPENCODE_BIND_PORT:-4096}:4096"
     environment:
+      HOME: /home/opencode
       TZ: ${TZ:-UTC}
       XDG_CONFIG_HOME: /config
       XDG_DATA_HOME: /data
@@ -53,6 +54,9 @@ services:
       LOCAL_ENDPOINT: ${LOCAL_ENDPOINT}
     volumes:
       - ./config/opencode:/config/opencode
+      - ./config/gh:/home/opencode/.config/gh
+      - ./config/git/.gitconfig:/home/opencode/.gitconfig
+      - ./config/ssh:/home/opencode/.ssh
       - ./data/opencode:/data/opencode
       - ./workspace/agent:/workspace/agent
     labels:

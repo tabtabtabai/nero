@@ -46,6 +46,33 @@ install_global_command() {
   ${SUDO} chmod +x "${TARGET_DIR}/nero"
 }
 
+prompt_yes_no() {
+  local var_name="$1"
+  local prompt_text="$2"
+  local default_value="${3:-y}"
+  local current_value="${!var_name:-}"
+  local answer=""
+
+  if [[ -n "${current_value}" ]]; then
+    return
+  fi
+
+  read -r -p "${prompt_text} " answer
+  answer="${answer:-${default_value}}"
+  case "${answer}" in
+    y|Y|yes|YES)
+      printf -v "$var_name" '%s' "yes"
+      ;;
+    n|N|no|NO)
+      printf -v "$var_name" '%s' "no"
+      ;;
+    *)
+      printf 'Please answer yes or no.\n' >&2
+      exit 1
+      ;;
+  esac
+}
+
 prompt_value() {
   local var_name="$1"
   local prompt_text="$2"
@@ -147,6 +174,79 @@ prompt_provider_setup() {
   esac
 }
 
+write_gitconfig() {
+  ${SUDO} mkdir -p "${TARGET_DIR}/config/git"
+  ${SUDO} tee "${TARGET_DIR}/config/git/.gitconfig" >/dev/null <<EOF
+[user]
+  name = ${GIT_USER_NAME}
+  email = ${GIT_USER_EMAIL}
+
+[credential "https://github.com"]
+  helper =
+  helper = !/usr/bin/gh auth git-credential
+EOF
+  ${SUDO} chown "${OPENCODE_UID}:${OPENCODE_GID}" "${TARGET_DIR}/config/git/.gitconfig"
+  ${SUDO} chmod 600 "${TARGET_DIR}/config/git/.gitconfig"
+}
+
+setup_github_auth() {
+  local gh_config_dir="${TARGET_DIR}/config/gh"
+  local github_auth_choice=""
+
+  if [[ "${ENABLE_GITHUB}" != "yes" ]]; then
+    GITHUB_TOKEN=""
+    GIT_USER_NAME="${GIT_USER_NAME:-}"
+    GIT_USER_EMAIL="${GIT_USER_EMAIL:-}"
+    return
+  fi
+
+  prompt_value GIT_USER_NAME "Git author name"
+  prompt_value GIT_USER_EMAIL "Git author email"
+
+  printf '\n'
+  printf 'GitHub auth method:\n'
+  printf '  1) Fine-grained token (recommended)\n'
+  printf '  2) Skip token for now\n'
+  read -r -p 'Auth [1]: ' github_auth_choice
+
+  case "${github_auth_choice:-1}" in
+    1)
+      prompt_value GITHUB_TOKEN "GitHub token" true
+      ;;
+    2)
+      GITHUB_TOKEN=""
+      ;;
+    *)
+      printf 'Invalid GitHub auth selection.\n' >&2
+      exit 1
+      ;;
+  esac
+
+  prompt_yes_no GITHUB_SSH_KEY "Generate GitHub SSH key for this VM? [Y/n]" "y"
+
+  ${SUDO} mkdir -p "${TARGET_DIR}/config/gh" "${TARGET_DIR}/config/ssh"
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${TARGET_DIR}/config/gh" "${TARGET_DIR}/config/ssh"
+  ${SUDO} chmod 700 "${TARGET_DIR}/config/ssh"
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    if ! need_cmd gh; then
+      printf 'gh CLI is required for GitHub auth setup. Run ./nero bootstrap first.\n' >&2
+      exit 1
+    fi
+    printf '%s\n' "${GITHUB_TOKEN}" | ${SUDO} env GH_CONFIG_DIR="${gh_config_dir}" gh auth login --hostname github.com --git-protocol https --with-token >/dev/null
+    ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${gh_config_dir}"
+  fi
+
+  if [[ "${GITHUB_SSH_KEY}" == "yes" && ! -f "${TARGET_DIR}/config/ssh/id_ed25519" ]]; then
+    ${SUDO} ssh-keygen -t ed25519 -N "" -C "nero@$(hostname)" -f "${TARGET_DIR}/config/ssh/id_ed25519" >/dev/null
+    ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${TARGET_DIR}/config/ssh"
+    ${SUDO} chmod 600 "${TARGET_DIR}/config/ssh/id_ed25519"
+    ${SUDO} chmod 644 "${TARGET_DIR}/config/ssh/id_ed25519.pub"
+  fi
+
+  write_gitconfig
+}
+
 write_env_file() {
   cat > "${SOURCE_DIR}/.env" <<EOF
 PROJECT_NAME=${PROJECT_NAME}
@@ -200,17 +300,26 @@ sync_project() {
 
 prepare_runtime_dirs() {
   ${SUDO} mkdir -p \
+    "${TARGET_DIR}/config/gh" \
+    "${TARGET_DIR}/config/git" \
     "${TARGET_DIR}/config/opencode" \
+    "${TARGET_DIR}/config/ssh" \
     "${TARGET_DIR}/data/opencode" \
     "${TARGET_DIR}/data/traefik" \
     "${TARGET_DIR}/workspace/agent"
 
   ${SUDO} touch "${TARGET_DIR}/data/traefik/acme.json"
+  ${SUDO} touch "${TARGET_DIR}/config/git/.gitconfig"
   ${SUDO} chmod 600 "${TARGET_DIR}/data/traefik/acme.json"
+  ${SUDO} chmod 600 "${TARGET_DIR}/config/git/.gitconfig"
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" \
+    "${TARGET_DIR}/config/gh" \
+    "${TARGET_DIR}/config/git" \
     "${TARGET_DIR}/config/opencode" \
+    "${TARGET_DIR}/config/ssh" \
     "${TARGET_DIR}/data/opencode" \
     "${TARGET_DIR}/workspace/agent"
+  ${SUDO} chmod 700 "${TARGET_DIR}/config/ssh"
 }
 
 if [[ -f "${SOURCE_DIR}/.env" ]]; then
@@ -236,11 +345,13 @@ OPENCODE_SERVER_USERNAME="${OPENCODE_SERVER_USERNAME:-opencode}"
 TZ="${TZ:-UTC}"
 OPENCODE_BIND_PORT="${OPENCODE_BIND_PORT:-4096}"
 prompt_provider_setup
+prompt_yes_no ENABLE_GITHUB "Enable GitHub integration for repos and PRs? [Y/n]" "y"
 
-write_env_file
 install_docker
 sync_project
 prepare_runtime_dirs
+setup_github_auth
+write_env_file
 install_global_command
 
 compose_up
@@ -262,6 +373,22 @@ If you chose OpenAI subscription auth, open the UI and run /connect.
 Then select OpenAI -> ChatGPT Plus/Pro to finish login in the browser.
 
 EOF
+
+if [[ "${ENABLE_GITHUB}" == "yes" ]]; then
+  cat <<EOF
+
+GitHub integration: enabled
+Git author: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>
+GH config dir: ${TARGET_DIR}/config/gh
+SSH key dir: ${TARGET_DIR}/config/ssh
+
+EOF
+  if [[ -f "${TARGET_DIR}/config/ssh/id_ed25519.pub" ]]; then
+    printf 'GitHub SSH public key:\n'
+    ${SUDO} cat "${TARGET_DIR}/config/ssh/id_ed25519.pub"
+    printf '\n'
+  fi
+fi
 
 if [[ "${TRAEFIK_MODE}" == "external" ]]; then
   cat <<EOF

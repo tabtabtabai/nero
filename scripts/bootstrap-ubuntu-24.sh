@@ -45,6 +45,7 @@ apt-get upgrade -y
 apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
+  gh \
   git \
   gnupg \
   lsb-release \
@@ -89,6 +90,6 @@ ufw --force enable
 install_oh_my_zsh "${TARGET_USER}" "${TARGET_HOME}"
 
 printf '\nUbuntu 24.04 bootstrap complete.\n'
-printf 'Installed: Docker Engine, Docker Compose plugin, git, curl, rsync, nano, ufw, zsh, Oh My Zsh.\n'
+printf 'Installed: Docker Engine, Docker Compose plugin, gh, git, curl, rsync, nano, ufw, zsh, Oh My Zsh.\n'
 printf 'Firewall: OpenSSH, 80/tcp, and 443/tcp allowed.\n'
 printf 'Next: cp .env.example .env && ./nero install\n'
