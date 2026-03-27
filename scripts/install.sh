@@ -80,7 +80,7 @@ write_traefik_dynamic_config() {
 http:
   routers:
     opencode:
-      rule: Host(`${OPENCODE_DOMAIN}`)
+      rule: Host(\`${OPENCODE_DOMAIN}\`)
       entryPoints:
         - websecure
       service: opencode
