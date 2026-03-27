@@ -2,7 +2,7 @@ services:
   traefik:
     profiles:
       - self-proxy
-    image: traefik:v3.4
+    image: traefik:v3.6
     container_name: ${PROJECT_NAME:-nero}-traefik
     restart: unless-stopped
     ports:
@@ -24,7 +24,6 @@ services:
       - --log.level=INFO
     environment:
       CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
-      DOCKER_API_VERSION: "1.41"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./data/traefik:/var/traefik
