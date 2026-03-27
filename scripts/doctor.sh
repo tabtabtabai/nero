@@ -20,7 +20,6 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | (gr
 
 printf '\nWorkspace\n'
 for path in \
-  "${PROJECT_DIR}/workspace/agent/company-wiki" \
   "${PROJECT_DIR}/workspace/agent/knowledge" \
   "${PROJECT_DIR}/workspace/agent/memory" \
   "${PROJECT_DIR}/workspace/agent/output" \

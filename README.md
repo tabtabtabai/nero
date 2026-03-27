@@ -143,7 +143,6 @@ That avoids stale copies under `/opt` and keeps `nero update` honest.
 
 Nero now scaffolds the agent workspace automatically with:
 
-- `workspace/agent/company-wiki/` for the internal company wiki
 - `workspace/agent/knowledge/` for raw source material
 - `workspace/agent/memory/` for distilled notes and indexes
 - `workspace/agent/output/` for generated deliverables
@@ -154,7 +153,6 @@ Important conventions:
 
 - agents may create additional `.agents/` folders inside subdirectories when local context is useful
 - `workspace/agent/.agents/index.md` acts as the top-level navigation map
-- the company wiki starts with `workspace/agent/company-wiki/_index.md`
 - the memory system starts with `workspace/agent/memory/_index.md`
 
 The style target for future UI and content surfaces should be closer to Notion than Word: clean, lightweight, structured, and calm.
