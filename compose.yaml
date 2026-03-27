@@ -1,0 +1,66 @@
+services:
+  traefik:
+    image: traefik:v3.4
+    container_name: ${PROJECT_NAME:-nero}-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - --global.sendanonymoususage=false
+      - --api.dashboard=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/var/traefik/acme.json
+      - --log.level=INFO
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik:/var/traefik
+    networks:
+      - edge
+
+  opencode:
+    build:
+      context: ./opencode
+    container_name: ${PROJECT_NAME:-nero}-opencode
+    restart: unless-stopped
+    working_dir: /workspace/agent
+    environment:
+      TZ: ${TZ:-UTC}
+      XDG_CONFIG_HOME: /config
+      XDG_DATA_HOME: /data
+      OPENCODE_SERVER_USERNAME: ${OPENCODE_SERVER_USERNAME:-opencode}
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD}
+      OPENCODE_MODEL: ${OPENCODE_MODEL:-openai/gpt-5.4}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      LOCAL_ENDPOINT: ${LOCAL_ENDPOINT}
+    volumes:
+      - ./config/opencode:/config/opencode
+      - ./data/opencode:/data/opencode
+      - ./workspace/agent:/workspace/agent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.opencode.rule=Host(`${OPENCODE_DOMAIN}`)
+      - traefik.http.routers.opencode.entrypoints=websecure
+      - traefik.http.routers.opencode.tls=true
+      - traefik.http.routers.opencode.tls.certresolver=cloudflare
+      - traefik.http.services.opencode.loadbalancer.server.port=4096
+    networks:
+      - edge
+
+networks:
+  edge:
+    name: ${PROJECT_NAME:-nero}-edge
