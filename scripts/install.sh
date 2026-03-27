@@ -42,8 +42,14 @@ compose_up() {
 }
 
 install_global_command() {
-  ${SUDO} ln -sf "${TARGET_DIR}/nero" /usr/local/bin/nero
-  ${SUDO} chmod +x "${TARGET_DIR}/nero"
+  local command_target="${TARGET_DIR}/nero"
+
+  if [[ -d "${SOURCE_DIR}/.git" ]]; then
+    command_target="${SOURCE_DIR}/nero"
+  fi
+
+  ${SUDO} ln -sf "${command_target}" /usr/local/bin/nero
+  ${SUDO} chmod +x "${command_target}"
 }
 
 prompt_yes_no() {
