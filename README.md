@@ -69,6 +69,7 @@ The installer now also:
 - prepares `gh`, git identity, and SSH material for GitHub workflows
 - reuses values already present in `.env` instead of asking every time
 - writes shell-safe `.env` values so names with spaces do not break reinstall
+- deploys in place when run from a git clone, so `nero update` always tracks the real repo
 - installs or upgrades Docker Engine and Docker Compose from Docker's official Ubuntu repo
 
 ## Fresh Ubuntu 24 VM
@@ -121,6 +122,9 @@ nero update
 
 - pulls the latest repo changes with `git pull --ff-only`
 - reruns the full install workflow so permissions, proxy mode, and containers are repaired from the repo state
+
+If Nero was installed from a git clone, the repo itself is the deployment source.
+That avoids stale copies under `/opt` and keeps `nero update` honest.
 
 ## GitHub integration
 

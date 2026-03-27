@@ -2,8 +2,15 @@
 set -euo pipefail
 
 PROJECT_NAME="nero"
-TARGET_DIR="${TARGET_DIR:-/opt/${PROJECT_NAME}}"
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -n "${TARGET_DIR:-}" ]]; then
+  TARGET_DIR="${TARGET_DIR}"
+elif [[ -d "${SOURCE_DIR}/.git" ]]; then
+  TARGET_DIR="${SOURCE_DIR}"
+else
+  TARGET_DIR="/opt/${PROJECT_NAME}"
+fi
 
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/docker-ubuntu.sh"
 
@@ -57,10 +64,10 @@ compose_down() {
 }
 
 install_global_command() {
-  local command_target="${TARGET_DIR}/nero"
+  local command_target="${SOURCE_DIR}/nero"
 
-  if [[ -d "${SOURCE_DIR}/.git" ]]; then
-    command_target="${SOURCE_DIR}/nero"
+  if [[ ! -f "${command_target}" ]]; then
+    command_target="${TARGET_DIR}/nero"
   fi
 
   ${SUDO} ln -sf "${command_target}" /usr/local/bin/nero
@@ -247,6 +254,10 @@ OPENROUTER_API_KEY=$(shell_escape "${OPENROUTER_API_KEY:-}")
 GITHUB_TOKEN=$(shell_escape "${GITHUB_TOKEN:-}")
 LOCAL_ENDPOINT=$(shell_escape "${LOCAL_ENDPOINT:-}")
 EOF
+
+  if [[ "${TARGET_DIR}" != "${SOURCE_DIR}" ]]; then
+    ${SUDO} cp "${SOURCE_DIR}/.env" "${TARGET_DIR}/.env"
+  fi
 }
 
 install_docker() {
@@ -274,11 +285,11 @@ install_docker() {
 }
 
 sync_project() {
-  ${SUDO} mkdir -p "${TARGET_DIR}"
-
   if [[ "${SOURCE_DIR}" == "${TARGET_DIR}" ]]; then
     return
   fi
+
+  ${SUDO} mkdir -p "${TARGET_DIR}"
 
   tar \
     --exclude='.git' \
@@ -287,9 +298,6 @@ sync_project() {
     --exclude='workspace' \
     -cf - -C "${SOURCE_DIR}" . | ${SUDO} tar -xf - -C "${TARGET_DIR}"
 
-  if [[ -f "${SOURCE_DIR}/.env" ]]; then
-    ${SUDO} cp "${SOURCE_DIR}/.env" "${TARGET_DIR}/.env"
-  fi
 }
 
 prepare_runtime_dirs() {
@@ -348,6 +356,7 @@ set_model_defaults
 prompt_yes_no ENABLE_GITHUB "Enable GitHub integration for repos and PRs? [Y/n]" "y"
 
 install_docker
+write_env_file
 sync_project
 prepare_runtime_dirs
 setup_github_auth
