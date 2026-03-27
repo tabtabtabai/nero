@@ -47,11 +47,20 @@ detect_proxy_mode() {
 
 compose_up() {
   if [[ "${TRAEFIK_MODE}" == "self" ]]; then
+    ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" --profile self-proxy pull traefik || true
     ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" --profile self-proxy up -d --build --force-recreate --remove-orphans
     return
   fi
 
   ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" up -d --build --force-recreate --remove-orphans
+}
+
+remove_managed_containers() {
+  if [[ "${TRAEFIK_MODE}" == "self" ]]; then
+    ${SUDO} docker rm -f "${PROJECT_NAME}-traefik" >/dev/null 2>&1 || true
+  fi
+
+  ${SUDO} docker rm -f "${PROJECT_NAME}-opencode" >/dev/null 2>&1 || true
 }
 
 compose_down() {
@@ -365,6 +374,7 @@ write_traefik_dynamic_config
 install_global_command
 
 compose_down
+remove_managed_containers
 compose_up
 
 cat <<EOF
