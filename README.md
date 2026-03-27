@@ -25,6 +25,8 @@ That means the simplest internet-safe default is:
 2. OpenCode handles UI and API password protection
 3. The agent only sees its dedicated workspace mount
 
+In self-proxy mode, Nero now uses Traefik file-based routing instead of Docker label discovery to avoid Docker API compatibility nonsense on some VPS setups.
+
 ## Project layout
 
 ```text
@@ -67,6 +69,7 @@ The installer now also:
 - prepares `gh`, git identity, and SSH material for GitHub workflows
 - reuses values already present in `.env` instead of asking every time
 - writes shell-safe `.env` values so names with spaces do not break reinstall
+- installs or upgrades Docker Engine and Docker Compose from Docker's official Ubuntu repo
 
 ## Fresh Ubuntu 24 VM
 
@@ -83,6 +86,7 @@ The bootstrap script installs the host dependencies Nero expects:
 
 - Docker Engine
 - Docker Compose plugin
+- automatic Docker/Compose upgrades on rerun
 - gh, git, curl, rsync, nano, zsh
 - Oh My Zsh for the invoking non-root user when available
 - UFW with `OpenSSH`, `80/tcp`, and `443/tcp` allowed

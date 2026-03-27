@@ -18,6 +18,8 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/docker-ubuntu.sh"
+
 TARGET_USER="${SUDO_USER:-root}"
 TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
 ZSH_BIN="$(command -v zsh || true)"
@@ -76,30 +78,7 @@ apt-get install -y --no-install-recommends \
   ufw \
   zsh
 
-install -m 0755 -d /etc/apt/keyrings
-
-if [[ ! -f /etc/apt/keyrings/docker.asc ]]; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  chmod a+r /etc/apt/keyrings/docker.asc
-fi
-
-arch="$(dpkg --print-architecture)"
-codename="$(. /etc/os-release && printf '%s' "$VERSION_CODENAME")"
-
-cat > /etc/apt/sources.list.d/docker.list <<EOF
-deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${codename} stable
-EOF
-
-apt-get update
-apt-get install -y --no-install-recommends \
-  docker-ce \
-  docker-ce-cli \
-  containerd.io \
-  docker-buildx-plugin \
-  docker-compose-plugin
-
-systemctl enable docker
-systemctl start docker
+install_or_update_docker_ubuntu
 
 ufw allow OpenSSH
 ufw allow 80/tcp

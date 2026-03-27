@@ -5,6 +5,8 @@ PROJECT_NAME="nero"
 TARGET_DIR="${TARGET_DIR:-/opt/${PROJECT_NAME}}"
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib/docker-ubuntu.sh"
+
 DEFAULT_MODEL="openai/gpt-5.4"
 OPENCODE_UID="1000"
 OPENCODE_GID="1000"
@@ -54,6 +56,27 @@ install_global_command() {
 
   ${SUDO} ln -sf "${command_target}" /usr/local/bin/nero
   ${SUDO} chmod +x "${command_target}"
+}
+
+write_traefik_dynamic_config() {
+  ${SUDO} mkdir -p "${TARGET_DIR}/traefik/dynamic"
+  ${SUDO} tee "${TARGET_DIR}/traefik/dynamic/opencode.yml" >/dev/null <<EOF
+http:
+  routers:
+    opencode:
+      rule: Host(`${OPENCODE_DOMAIN}`)
+      entryPoints:
+        - websecure
+      service: opencode
+      tls:
+        certResolver: cloudflare
+
+  services:
+    opencode:
+      loadBalancer:
+        servers:
+          - url: http://${PROJECT_NAME}-opencode:4096
+EOF
 }
 
 prompt_yes_no() {
@@ -219,6 +242,22 @@ EOF
 
 install_docker() {
   if need_cmd docker && docker compose version >/dev/null 2>&1; then
+    if [[ -f /etc/os-release ]]; then
+      if [[ "${EUID}" -eq 0 ]]; then
+        install_or_update_docker_ubuntu
+      else
+        sudo bash -lc '. "'"${SOURCE_DIR}"'"/scripts/lib/docker-ubuntu.sh" && install_or_update_docker_ubuntu'
+      fi
+      return
+    fi
+  fi
+
+  if [[ -f /etc/os-release ]]; then
+    if [[ "${EUID}" -eq 0 ]]; then
+      install_or_update_docker_ubuntu
+    else
+      sudo bash -lc '. "'"${SOURCE_DIR}"'"/scripts/lib/docker-ubuntu.sh" && install_or_update_docker_ubuntu'
+    fi
     return
   fi
 
@@ -252,6 +291,7 @@ prepare_runtime_dirs() {
     "${TARGET_DIR}/config/ssh" \
     "${TARGET_DIR}/data/opencode" \
     "${TARGET_DIR}/data/traefik" \
+    "${TARGET_DIR}/traefik/dynamic" \
     "${TARGET_DIR}/workspace/agent"
 
   if [[ -d "${TARGET_DIR}/config/git/.gitconfig" ]]; then
@@ -302,6 +342,7 @@ sync_project
 prepare_runtime_dirs
 setup_github_auth
 write_env_file
+write_traefik_dynamic_config
 install_global_command
 
 compose_up

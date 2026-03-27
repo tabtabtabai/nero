@@ -11,8 +11,8 @@ services:
     command:
       - --global.sendanonymoususage=false
       - --api.dashboard=false
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
@@ -25,8 +25,8 @@ services:
     environment:
       CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./data/traefik:/var/traefik
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
     networks:
       - edge
 
@@ -59,13 +59,6 @@ services:
       - ./config/ssh:/home/node/.ssh
       - ./data/opencode:/data/opencode
       - ./workspace/agent:/workspace/agent
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.opencode.rule=Host(`${OPENCODE_DOMAIN}`)
-      - traefik.http.routers.opencode.entrypoints=websecure
-      - traefik.http.routers.opencode.tls=true
-      - traefik.http.routers.opencode.tls.certresolver=cloudflare
-      - traefik.http.services.opencode.loadbalancer.server.port=4096
     networks:
       - edge
 
