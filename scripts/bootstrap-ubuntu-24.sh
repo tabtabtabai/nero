@@ -20,22 +20,41 @@ fi
 
 TARGET_USER="${SUDO_USER:-root}"
 TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
+ZSH_BIN="$(command -v zsh || true)"
 
 install_oh_my_zsh() {
   local user="$1"
   local home_dir="$2"
 
-  if [[ "${user}" == "root" || ! -d "${home_dir}" ]]; then
+  if [[ -z "${home_dir}" || ! -d "${home_dir}" ]]; then
     return
   fi
 
   if [[ ! -d "${home_dir}/.oh-my-zsh" ]]; then
-    su - "${user}" -c "RUNZSH=no CHSH=yes KEEP_ZSHRC=yes sh -c '\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)' ''" || true
+    if [[ "${user}" == "root" ]]; then
+      RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" '' || true
+    else
+      su - "${user}" -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c '\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)' ''" || true
+    fi
   fi
 
-  if command -v zsh >/dev/null 2>&1; then
-    chsh -s "$(command -v zsh)" "${user}" || true
+  if [[ -n "${ZSH_BIN}" ]]; then
+    chsh -s "${ZSH_BIN}" "${user}" || true
   fi
+}
+
+launch_default_shell() {
+  if [[ ! -t 0 || ! -t 1 || "${NERO_AUTO_SHELL:-1}" != "1" || -z "${ZSH_BIN}" ]]; then
+    return
+  fi
+
+  printf 'Launching zsh for %s...\n' "${TARGET_USER}"
+
+  if [[ "${TARGET_USER}" == "root" ]]; then
+    exec "${ZSH_BIN}" -l
+  fi
+
+  exec su - "${TARGET_USER}"
 }
 
 export DEBIAN_FRONTEND=noninteractive
@@ -93,3 +112,5 @@ printf '\nUbuntu 24.04 bootstrap complete.\n'
 printf 'Installed: Docker Engine, Docker Compose plugin, gh, git, curl, rsync, nano, ufw, zsh, Oh My Zsh.\n'
 printf 'Firewall: OpenSSH, 80/tcp, and 443/tcp allowed.\n'
 printf 'Next: cp .env.example .env && ./nero install\n'
+
+launch_default_shell
