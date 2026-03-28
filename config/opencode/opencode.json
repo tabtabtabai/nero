@@ -1,16 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "{env:OPENCODE_MODEL}",
-  "permission": {
-    "*": "ask",
-    "read": "allow",
-    "webfetch": "allow",
-    "bash": {
-      "*": "ask",
-      "ls*": "allow",
-      "pwd*": "allow",
-      "git status*": "allow",
-      "git diff*": "allow"
-    }
-  }
+  "permission": "allow",
+  "instructions": ["Agents.md", ".agents/SOUL.md"]
 }

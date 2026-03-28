@@ -47,7 +47,7 @@ nero/
     install.sh
     update.sh
   templates/workspace/
-  workspace/agent/
+  workspace/agents/   # created on install (gitignored)
 ```
 
 ## Quick start
@@ -141,21 +141,25 @@ That avoids stale copies under `/opt` and keeps `nero update` honest.
 
 ## Workspace layout
 
-Nero now scaffolds the agent workspace automatically with:
+Defaults live in `templates/workspace/` and are copied into `workspace/agents/` on install (`cp -an`, so your files are never overwritten).
 
-- `workspace/agent/knowledge/` for raw source material
-- `workspace/agent/memory/` for distilled notes and indexes
-- `workspace/agent/output/` for generated deliverables
-- `workspace/agent/code/` for repositories
-- `workspace/agent/.agents/` for agent navigation files, maps, and local skills
+| Path | Purpose |
+|------|---------|
+| `drop/` | Files to process immediately |
+| `knowledge/` | Raw archive / library |
+| `memory/` | Distilled notes (`_index.md`, `me.md`, …) |
+| `output/` | Generated deliverables (`YYYY-MM-DD-*.md`) |
+| `code/` | Repos and experiments |
+| `scripts/` | Agent-created scripts; `scripts/defaults/` has extraction helpers |
+| `.agents/` | Navigation, `SOUL.md` (OpenClaw-style voice), local skills |
+| `agents/` | Optional sub-workspaces for parallel or task-specific agents |
+| `Agents.md` | Full workspace rules (memory vs knowledge, Appius docs, parallel tasks) |
 
 Important conventions:
 
-- agents may create additional `.agents/` folders inside subdirectories when local context is useful
-- `workspace/agent/.agents/index.md` acts as the top-level navigation map
-- the memory system starts with `workspace/agent/memory/_index.md`
-
-The style target for future UI and content surfaces should be closer to Notion than Word: clean, lightweight, structured, and calm.
+- Nested `.agents/` folders are fine when a subdirectory needs local context.
+- `nero install` migrates a legacy `workspace/agent/` directory to `workspace/agents/` if present.
+- The style target for future UI and content surfaces should be closer to Notion than Word: clean, lightweight, structured, and calm.
 
 ## GitHub integration
 
@@ -250,14 +254,14 @@ The future admin service for integrations and permissions should be added as a s
 - OpenCode config: `config/opencode/`
 - OpenCode data: `data/opencode/`
 - Traefik ACME data: `data/traefik/`
-- Agent workspace: `workspace/agent/`
+- Agent workspace: `workspace/agents/`
 
 ## Notes
 
-- The container starts OpenCode in `/workspace/agent`
+- The container starts OpenCode in `/workspace/agents`
 - The default model is configured from installer onboarding via `OPENCODE_MODEL`
 - OpenCode provider credentials from `/connect` are persisted in the mounted data directory
 - Mounted config/data/workspace directories are auto-owned by the `opencode` container user during install
-- `AGENTS.md` gives the instance a default personality inspired by OpenClaw's `SOUL.md` style
-- The default OpenCode permissions config is conservative and asks before sensitive actions
+- `AGENTS.md` gives the instance a default personality; `workspace/agents/.agents/SOUL.md` follows OpenClaw-style voice and values
+- OpenCode permissions default to allow (no approval prompts); adjust `config/opencode/opencode.json` if you want stricter gates
 - SSL uses the Cloudflare DNS challenge, so certificate renewal stays automatic

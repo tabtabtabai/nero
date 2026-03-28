@@ -62,14 +62,41 @@ detect_proxy_mode() {
   fi
 }
 
-compose_up() {
+compose_config_hash() {
+  # Stack definition: compose file + env (paths under TARGET_DIR after sync/write).
+  sha256sum "${TARGET_DIR}/compose.yaml" "${TARGET_DIR}/.env" 2>/dev/null | sha256sum | awk '{print $1}'
+}
+
+_compose_up() {
+  local force_recreate="$1"
+  local recreate_args=()
+  if [[ "${force_recreate}" == "yes" ]]; then
+    recreate_args=(--force-recreate)
+  fi
+
   if [[ "${TRAEFIK_MODE}" == "self" ]]; then
     ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" --profile self-proxy pull traefik || true
-    ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" --profile self-proxy up -d --build --force-recreate --remove-orphans
+    ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" --profile self-proxy up -d --build "${recreate_args[@]}" --remove-orphans
     return
   fi
 
-  ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" up -d --build --force-recreate --remove-orphans
+  ${SUDO} docker compose -f "${TARGET_DIR}/compose.yaml" --env-file "${TARGET_DIR}/.env" up -d --build "${recreate_args[@]}" --remove-orphans
+}
+
+refresh_compose_stack() {
+  local stamp="${TARGET_DIR}/data/.nero-compose-signature"
+  local h
+  h="$(compose_config_hash)"
+
+  if [[ -f "${stamp}" ]] && [[ "$(cat "${stamp}")" == "${h}" ]]; then
+    _compose_up no
+  else
+    compose_down
+    remove_managed_containers
+    _compose_up yes
+  fi
+
+  printf '%s\n' "${h}" | ${SUDO} tee "${stamp}" >/dev/null
 }
 
 remove_managed_containers() {
@@ -113,9 +140,18 @@ http:
 EOF
 }
 
+migrate_legacy_agent_workspace() {
+  local base="${TARGET_DIR}/workspace"
+  if [[ -d "${base}/agent" && ! -d "${base}/agents" ]]; then
+    ${SUDO} mv "${base}/agent" "${base}/agents"
+  fi
+}
+
 initialize_workspace_structure() {
   local template_root="${SOURCE_DIR}/templates/workspace"
-  local workspace_root="${TARGET_DIR}/workspace/agent"
+  local workspace_root="${TARGET_DIR}/workspace/agents"
+
+  migrate_legacy_agent_workspace
 
   ${SUDO} mkdir -p "${workspace_root}"
 
@@ -124,6 +160,7 @@ initialize_workspace_structure() {
   fi
 
   ${SUDO} cp -an "${template_root}/." "${workspace_root}/"
+  ${SUDO} chmod +x "${workspace_root}/scripts/defaults/"*.sh 2>/dev/null || true
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${workspace_root}"
 }
 
@@ -184,9 +221,34 @@ set_model_defaults() {
   LOCAL_ENDPOINT="${LOCAL_ENDPOINT:-}"
 }
 
+resolve_git_identity() {
+  if [[ -z "${GIT_USER_NAME:-}" ]]; then
+    if need_cmd git && git config --global user.name >/dev/null 2>&1; then
+      GIT_USER_NAME="$(git config --global user.name)"
+    else
+      GIT_USER_NAME="$(id -un)"
+    fi
+  fi
+
+  if [[ -z "${GIT_USER_EMAIL:-}" ]]; then
+    if need_cmd git && git config --global user.email >/dev/null 2>&1; then
+      GIT_USER_EMAIL="$(git config --global user.email)"
+    else
+      local hn
+      hn="$(hostname -f 2>/dev/null || hostname)"
+      if [[ "${hn}" == *.* ]]; then
+        GIT_USER_EMAIL="$(id -un)@${hn}"
+      else
+        GIT_USER_EMAIL="$(id -un)@${hn}.local"
+      fi
+    fi
+  fi
+}
+
 write_gitconfig() {
   ${SUDO} mkdir -p "${TARGET_DIR}/config/git"
-  ${SUDO} tee "${TARGET_DIR}/config/git/.gitconfig" >/dev/null <<EOF
+  if [[ "${ENABLE_GITHUB:-}" == "yes" ]]; then
+    ${SUDO} tee "${TARGET_DIR}/config/git/.gitconfig" >/dev/null <<EOF
 [user]
   name = ${GIT_USER_NAME}
   email = ${GIT_USER_EMAIL}
@@ -195,8 +257,27 @@ write_gitconfig() {
   helper =
   helper = !/usr/bin/gh auth git-credential
 EOF
+  else
+    ${SUDO} tee "${TARGET_DIR}/config/git/.gitconfig" >/dev/null <<EOF
+[user]
+  name = ${GIT_USER_NAME}
+  email = ${GIT_USER_EMAIL}
+EOF
+  fi
   ${SUDO} chown "${OPENCODE_UID}:${OPENCODE_GID}" "${TARGET_DIR}/config/git/.gitconfig"
   ${SUDO} chmod 600 "${TARGET_DIR}/config/git/.gitconfig"
+}
+
+# Container-only bind-mount does not affect `git` on the host (e.g. ssh as root in the repo).
+apply_host_git_identity() {
+  if [[ "${SKIP_HOST_GIT_CONFIG:-}" == "1" ]]; then
+    return
+  fi
+  if ! need_cmd git; then
+    return
+  fi
+  git config --global user.name "${GIT_USER_NAME}"
+  git config --global user.email "${GIT_USER_EMAIL}"
 }
 
 setup_github_auth() {
@@ -206,13 +287,8 @@ setup_github_auth() {
 
   if [[ "${ENABLE_GITHUB}" != "yes" ]]; then
     GITHUB_TOKEN=""
-    GIT_USER_NAME="${GIT_USER_NAME:-}"
-    GIT_USER_EMAIL="${GIT_USER_EMAIL:-}"
     return
   fi
-
-  prompt_value GIT_USER_NAME "Git author name"
-  prompt_value GIT_USER_EMAIL "Git author email"
 
   if [[ -z "${GITHUB_TOKEN:-}" && ! -f "${gh_hosts_file}" ]]; then
     printf '\n'
@@ -256,8 +332,6 @@ setup_github_auth() {
     ${SUDO} chmod 600 "${TARGET_DIR}/config/ssh/id_ed25519"
     ${SUDO} chmod 644 "${TARGET_DIR}/config/ssh/id_ed25519.pub"
   fi
-
-  write_gitconfig
 }
 
 write_env_file() {
@@ -341,7 +415,7 @@ prepare_runtime_dirs() {
     "${TARGET_DIR}/data/opencode" \
     "${TARGET_DIR}/data/traefik" \
     "${TARGET_DIR}/traefik/dynamic" \
-    "${TARGET_DIR}/workspace/agent"
+    "${TARGET_DIR}/workspace/agents"
 
   if [[ -d "${TARGET_DIR}/config/git/.gitconfig" ]]; then
     ${SUDO} rm -rf "${TARGET_DIR}/config/git/.gitconfig"
@@ -357,7 +431,7 @@ prepare_runtime_dirs() {
     "${TARGET_DIR}/config/opencode" \
     "${TARGET_DIR}/config/ssh" \
     "${TARGET_DIR}/data/opencode" \
-    "${TARGET_DIR}/workspace/agent"
+    "${TARGET_DIR}/workspace/agents"
   ${SUDO} chmod 700 "${TARGET_DIR}/config/ssh"
   ${SUDO} chmod 755 "${TARGET_DIR}/data/opencode"
 }
@@ -392,14 +466,15 @@ write_env_file
 sync_project
 prepare_runtime_dirs
 initialize_workspace_structure
+resolve_git_identity
 setup_github_auth
+write_gitconfig
+apply_host_git_identity
 write_env_file
 write_traefik_dynamic_config
 install_global_command
 
-compose_down
-remove_managed_containers
-compose_up
+refresh_compose_stack
 
 cat <<EOF
 
@@ -411,8 +486,9 @@ Model: ${OPENCODE_MODEL}
 Proxy mode: ${TRAEFIK_MODE}
 
 Project dir: ${TARGET_DIR}
-Workspace dir: ${TARGET_DIR}/workspace/agent
+Workspace dir: ${TARGET_DIR}/workspace/agents
 Command: nero
+Git author: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>
 
 If you chose OpenAI subscription auth, open the UI and run /connect.
 Then select OpenAI -> ChatGPT Plus/Pro to finish login in the browser.
@@ -423,7 +499,6 @@ if [[ "${ENABLE_GITHUB}" == "yes" ]]; then
   cat <<EOF
 
 GitHub integration: enabled
-Git author: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>
 GH config dir: ${TARGET_DIR}/config/gh
 SSH key dir: ${TARGET_DIR}/config/ssh
 

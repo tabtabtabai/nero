@@ -20,11 +20,14 @@ docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | (gr
 
 printf '\nWorkspace\n'
 for path in \
-  "${PROJECT_DIR}/workspace/agent/knowledge" \
-  "${PROJECT_DIR}/workspace/agent/memory" \
-  "${PROJECT_DIR}/workspace/agent/output" \
-  "${PROJECT_DIR}/workspace/agent/code" \
-  "${PROJECT_DIR}/workspace/agent/.agents"; do
+  "${PROJECT_DIR}/workspace/agents/drop" \
+  "${PROJECT_DIR}/workspace/agents/knowledge" \
+  "${PROJECT_DIR}/workspace/agents/memory" \
+  "${PROJECT_DIR}/workspace/agents/output" \
+  "${PROJECT_DIR}/workspace/agents/code" \
+  "${PROJECT_DIR}/workspace/agents/scripts" \
+  "${PROJECT_DIR}/workspace/agents/.agents" \
+  "${PROJECT_DIR}/workspace/agents/agents"; do
   if [[ -e "${path}" ]]; then
     printf 'ok  %s\n' "${path}"
   else

@@ -1,5 +1,8 @@
 .env
 data/
-workspace/
-!workspace/agent/
-!workspace/agent/.gitkeep
+/workspace/
+.config/
+traefik/
+config/gh/
+config/git/.gitconfig
+config/ssh/

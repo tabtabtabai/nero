@@ -35,7 +35,7 @@ services:
       context: ./opencode
     container_name: ${PROJECT_NAME:-nero}-opencode
     restart: unless-stopped
-    working_dir: /workspace/agent
+    working_dir: /workspace/agents
     ports:
       - "127.0.0.1:${OPENCODE_BIND_PORT:-4096}:4096"
     environment:
@@ -58,7 +58,7 @@ services:
       - ./config/git/.gitconfig:/home/node/.gitconfig
       - ./config/ssh:/home/node/.ssh
       - ./data/opencode:/data/opencode
-      - ./workspace/agent:/workspace/agent
+      - ./workspace/agents:/workspace/agents
     networks:
       - edge
 

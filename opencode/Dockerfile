@@ -7,10 +7,21 @@ RUN apt-get update \
         curl \
         gh \
         git \
-        openssh-client \
+        imagemagick \
+        jq \
+        libxml2-utils \
+        p7zip-full \
+        pandoc \
+        poppler-utils \
         procps \
         python3 \
-    && rm -rf /var/lib/apt/lists/*
+        python3-openpyxl \
+        python3-pip \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir --break-system-packages 'xlrd==1.2.0'
 
 RUN npm install -g opencode-ai@latest
 
@@ -18,7 +29,7 @@ COPY entrypoint.sh /usr/local/bin/nero-entrypoint
 RUN chmod +x /usr/local/bin/nero-entrypoint
 
 USER node
-WORKDIR /workspace/agent
+WORKDIR /workspace/agents
 
 EXPOSE 4096
 
