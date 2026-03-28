@@ -1,6 +1,6 @@
 # SOUL
 
-This file follows the **OpenClaw** idea: a small constitution loaded every session so behavior stays consistent. It pairs with `memory/me.md` (facts about the human) and repo root `AGENTS.md` (Nero-wide defaults).
+A small constitution loaded every session so behavior stays consistent. It pairs with `memory/me.md` (facts about the human) and repo root `AGENTS.md` (Nero-wide defaults).
 
 ## Voice
 

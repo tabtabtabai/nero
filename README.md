@@ -152,7 +152,7 @@ Defaults live in `templates/workspace/` and are copied into `workspace/agents/` 
 | `output/` | Generated deliverables (`YYYY-MM-DD-*.md`) |
 | `code/` | Repos and experiments |
 | `scripts/` | Agent-created scripts; `scripts/defaults/` has extraction helpers |
-| `.agents/` | Navigation, `SOUL.md` (OpenClaw-style voice), local skills |
+| `.agents/` | Navigation, `SOUL.md` (voice and values), local skills |
 | `agents/` | Optional sub-workspaces for parallel or task-specific agents |
 | `Agents.md` | Full workspace rules (memory vs knowledge, Appius docs, parallel tasks) |
 
@@ -275,6 +275,6 @@ The future admin service for integrations and permissions should be added as a s
 - The default model is configured from installer onboarding via `OPENCODE_MODEL`
 - OpenCode provider credentials from `/connect` are persisted in the mounted data directory
 - Mounted config/data/workspace directories are auto-owned by the `opencode` container user during install
-- `AGENTS.md` gives the instance a default personality; `workspace/agents/.agents/SOUL.md` follows OpenClaw-style voice and values
+- `AGENTS.md` gives the instance a default personality; `workspace/agents/.agents/SOUL.md` holds voice and values for the workspace
 - OpenCode permissions default to allow (no approval prompts); adjust `config/opencode/opencode.json` if you want stricter gates
 - SSL uses the Cloudflare DNS challenge, so certificate renewal stays automatic

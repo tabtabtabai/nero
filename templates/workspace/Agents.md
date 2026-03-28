@@ -15,7 +15,7 @@ You are my personal AI assistant running on a Hetzner VM. I interact with you vi
 | `scripts/` | Executable scripts you create. Use `chmod +x` on scripts you write here. |
 | `scripts/defaults/` | Bundled text-extraction helpers (see below). |
 | `code/` | Cloned repos and local code experiments. |
-| `.agents/` | Navigation, maps, skills, and **SOUL.md** (voice and values — OpenClaw-style). |
+| `.agents/` | Navigation, maps, skills, and **SOUL.md** (voice and values). |
 | `agents/` | Optional sub-workspaces for task-specific agents or parallel workstreams. |
 
 You may create additional files under `memory/` as needed.

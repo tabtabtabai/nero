@@ -1,6 +1,6 @@
 # `.agents/`
 
-Local navigation and identity for this workspace (OpenClaw-style).
+Local navigation and identity for this workspace.
 
 | File | Role |
 |------|------|
