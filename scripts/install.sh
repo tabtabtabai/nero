@@ -176,7 +176,7 @@ initialize_workspace_structure() {
     return
   fi
 
-  ${SUDO} cp -an "${template_root}/." "${workspace_root}/"
+  ${SUDO} cp -a --update=none "${template_root}/." "${workspace_root}/"
   ${SUDO} chmod +x "${workspace_root}/scripts/defaults/"*.sh 2>/dev/null || true
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${workspace_root}"
 }
@@ -551,6 +551,13 @@ fi
 load_env_file "${SOURCE_DIR}/.env"
 
 detect_proxy_mode
+
+if [[ "${NERO_REMOTE_COMMAND:-}" == "update" ]]; then
+  if [[ ! -f "${TARGET_DIR}/.env" ]] || [[ -z "${OPENCODE_DOMAIN:-}" ]] || [[ -z "${OPENCODE_SERVER_PASSWORD:-}" ]]; then
+    printf 'nero update requires an existing install. Ensure %s/.env exists and sets OPENCODE_DOMAIN and OPENCODE_SERVER_PASSWORD. Run `nero install` if this host is not set up yet.\n' "${TARGET_DIR}" >&2
+    exit 1
+  fi
+fi
 
 prompt_value OPENCODE_DOMAIN "OpenCode domain"
 prompt_value OPENCODE_SERVER_PASSWORD "OpenCode server password" true

@@ -70,4 +70,5 @@ if [[ ! -f "${TMP_DIR}/scripts/install.sh" ]]; then
   exit 1
 fi
 
+export NERO_REMOTE_COMMAND="${COMMAND}"
 TARGET_DIR="${TARGET_DIR}" bash "${TMP_DIR}/scripts/install.sh"
