@@ -21,7 +21,10 @@ RUN apt-get update \
         tesseract-ocr-eng \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /bin/bash /usr/bin/bash \
     && pip3 install --no-cache-dir --break-system-packages 'xlrd==1.2.0'
+
+ENV SHELL=/bin/bash
 
 RUN npm install -g opencode-ai@latest
 
