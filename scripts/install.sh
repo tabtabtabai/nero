@@ -232,7 +232,7 @@ ensure_nodejs() {
   if [[ ! -f /etc/apt/sources.list.d/nodesource.list ]]; then
     curl -fsSL https://deb.nodesource.com/setup_22.x | ${SUDO} bash -
   fi
-  ${SUDO} DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+  ${SUDO} env DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 }
 
 # Host SQLite CLI (e.g. scripts that read OpenCode's opencode.db, jq + sqlite3).
@@ -244,7 +244,7 @@ ensure_sqlite3() {
     printf 'sqlite3 is not installed and apt-get was not found; install the sqlite3 package manually.\n' >&2
     return 1
   fi
-  ${SUDO} DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sqlite3
+  ${SUDO} env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sqlite3
 }
 
 resolve_opencode_service_user() {
