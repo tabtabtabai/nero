@@ -18,7 +18,22 @@ fi
 WORKSPACE_ROOT="${WORKSPACE_HOST_DIR:-${PROJECT_DIR}/workspace}"
 
 compose_config_hash() {
-  sha256sum "${PROJECT_DIR}/compose.yaml" "${PROJECT_DIR}/.env" 2>/dev/null | sha256sum | awk '{print $1}'
+  local -a inputs=()
+  local f
+  for f in \
+    "${PROJECT_DIR}/compose.yaml" \
+    "${PROJECT_DIR}/.env" \
+    "${PROJECT_DIR}/scripts/install.sh" \
+    "${PROJECT_DIR}/scripts/run-opencode-host.sh"; do
+    if [[ -f "${f}" ]]; then
+      inputs+=("${f}")
+    fi
+  done
+  if [[ "${#inputs[@]}" -eq 0 ]]; then
+    printf '0\n'
+    return
+  fi
+  sha256sum "${inputs[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
 read_compose_stamp() {

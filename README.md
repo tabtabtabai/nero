@@ -132,6 +132,8 @@ curl -fsSL https://raw.githubusercontent.com/PatrickRogg/nero/main/scripts/insta
 - downloads the latest Nero source archive into a temporary directory
 - reruns the full install workflow so permissions, proxy mode, Traefik, and the host OpenCode service (`opencode-ai` npm version + `systemctl restart nero-opencode`) stay aligned with the latest source
 
+The installer itself is idempotent: it removes any legacy `nero-opencode` Docker container and `/opt/nero/opencode` if present, bumps the internal stack signature when `scripts/install.sh` or `scripts/run-opencode-host.sh` change so Traefik is recreated when needed, and resolves `OPENCODE_UID` to a real passwd account when the workspace is owned by an orphan numeric uid.
+
 That keeps the live install under `/opt/nero` without requiring the Nero repo itself to be cloned on the server.
 
 If you are developing Nero itself, local repo commands still work:

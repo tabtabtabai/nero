@@ -56,25 +56,46 @@ resolve_workspace_host_dir() {
   WORKSPACE_HOST_DIR="${install_home}/nero/workspace"
 }
 
+# Set OPENCODE_UID/GID from a passwd name or uid that actually exists (getent).
+_opencode_try_uid_pair() {
+  local want="$1"
+  local pw=""
+  [[ -n "${want}" ]] || return 1
+  pw="$(getent passwd "${want}")" || return 1
+  [[ -n "${pw}" ]] || return 1
+  OPENCODE_UID="$(printf '%s' "${pw}" | cut -d: -f3)"
+  OPENCODE_GID="$(printf '%s' "${pw}" | cut -d: -f4)"
+  return 0
+}
+
+# Prefer a real Unix account. Workspace may be owned by a numeric uid with no passwd row
+# (e.g. copied from another host); then fall back to sudo caller or current user.
 resolve_opencode_ids() {
-  local candidate="${OPENCODE_UID:-1000}"
-  if getent passwd "${candidate}" >/dev/null 2>&1; then
-    OPENCODE_UID="${candidate}"
-    if [[ -z "${OPENCODE_GID:-}" ]]; then
-      OPENCODE_GID="$(id -g "$(getent passwd "${OPENCODE_UID}" | cut -d: -f1)" 2>/dev/null || true)"
-    fi
-    if [[ -z "${OPENCODE_GID:-}" ]]; then
-      OPENCODE_GID="${candidate}"
-    fi
-    return 0
-  fi
+  local workspace_uid=""
   if [[ -d "${WORKSPACE_HOST_DIR}" ]]; then
-    OPENCODE_UID="$(stat -c %u "${WORKSPACE_HOST_DIR}")"
-    OPENCODE_GID="$(stat -c %g "${WORKSPACE_HOST_DIR}")"
+    workspace_uid="$(stat -c %u "${WORKSPACE_HOST_DIR}")"
+  fi
+
+  if [[ -n "${OPENCODE_UID:-}" ]] && _opencode_try_uid_pair "${OPENCODE_UID}"; then
     return 0
   fi
-  OPENCODE_UID="$(id -u)"
-  OPENCODE_GID="$(id -g)"
+  if _opencode_try_uid_pair "1000"; then
+    return 0
+  fi
+  if [[ -n "${workspace_uid}" ]] && _opencode_try_uid_pair "${workspace_uid}"; then
+    return 0
+  fi
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    local suid=""
+    suid="$(id -u "${SUDO_USER}" 2>/dev/null || true)"
+    if [[ -n "${suid}" ]] && _opencode_try_uid_pair "${suid}"; then
+      return 0
+    fi
+    if _opencode_try_uid_pair "${SUDO_USER}"; then
+      return 0
+    fi
+  fi
+  _opencode_try_uid_pair "$(id -u)"
 }
 
 port_in_use() {
@@ -108,8 +129,23 @@ detect_proxy_mode() {
 }
 
 compose_config_hash() {
-  # Stack definition: compose file + env (paths under TARGET_DIR after sync/write).
-  sha256sum "${TARGET_DIR}/compose.yaml" "${TARGET_DIR}/.env" 2>/dev/null | sha256sum | awk '{print $1}'
+  # Bump the stamp when compose, env, or host-OpenCode scripts change so `nero update` reapplies Docker + systemd reliably.
+  local -a inputs=()
+  local f
+  for f in \
+    "${TARGET_DIR}/compose.yaml" \
+    "${TARGET_DIR}/.env" \
+    "${TARGET_DIR}/scripts/install.sh" \
+    "${TARGET_DIR}/scripts/run-opencode-host.sh"; do
+    if [[ -f "${f}" ]]; then
+      inputs+=("${f}")
+    fi
+  done
+  if [[ "${#inputs[@]}" -eq 0 ]]; then
+    printf '0\n'
+    return
+  fi
+  sha256sum "${inputs[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
 read_compose_stamp() {
@@ -163,6 +199,21 @@ refresh_compose_stack() {
 remove_managed_containers() {
   ${SUDO} docker rm -f "${PROJECT_NAME}-traefik" >/dev/null 2>&1 || true
   ${SUDO} docker rm -f "${PROJECT_NAME}-opencode" >/dev/null 2>&1 || true
+}
+
+# Idempotent migration from Docker OpenCode to host OpenCode (safe to run every install/update).
+cleanup_legacy_docker_opencode() {
+  ${SUDO} docker rm -f "${PROJECT_NAME}-opencode" >/dev/null 2>&1 || true
+  if [[ -d "${TARGET_DIR}/opencode" ]]; then
+    ${SUDO} rm -rf "${TARGET_DIR}/opencode"
+  fi
+  ${SUDO} docker rmi "${PROJECT_NAME}-opencode" >/dev/null 2>&1 || true
+}
+
+ensure_host_opencode_scripts_executable() {
+  if [[ -f "${TARGET_DIR}/scripts/run-opencode-host.sh" ]]; then
+    ${SUDO} chmod +x "${TARGET_DIR}/scripts/run-opencode-host.sh"
+  fi
 }
 
 compose_down() {
@@ -674,6 +725,7 @@ prompt_yes_no ENABLE_GITHUB "Enable GitHub integration for repos and PRs? [Y/n]"
 
 install_docker
 sync_project
+ensure_host_opencode_scripts_executable
 write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
@@ -688,6 +740,7 @@ ensure_external_edge_network
 
 install_opencode_cli_global
 install_opencode_systemd
+cleanup_legacy_docker_opencode
 refresh_compose_stack
 restart_host_opencode
 
