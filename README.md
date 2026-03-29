@@ -144,7 +144,7 @@ If you are developing Nero itself, local repo commands still work:
 
 ## Workspace layout
 
-Defaults live in `templates/workspace/` and are copied into the host workspace on install (`~/nero/workspace/agents` by default, using `cp -an` so your files are never overwritten).
+Defaults live in `templates/workspace/` and are copied into the host workspace on install (`~/nero/workspace` by default, using `cp -an` so your files are never overwritten).
 
 | Path | Purpose |
 |------|---------|
@@ -257,7 +257,7 @@ The future admin service for integrations and permissions should be added as a s
 - OpenCode config: `config/opencode/`
 - OpenCode data: `data/opencode/`
 - Traefik ACME data: `data/traefik/`
-- Agent workspace: `~/nero/workspace/agents/` by default (`WORKSPACE_HOST_DIR` overrides it)
+- Agent workspace: `~/nero/workspace/` by default (`WORKSPACE_HOST_DIR` overrides it)
 
 ## Notes
 
@@ -265,6 +265,6 @@ The future admin service for integrations and permissions should be added as a s
 - The default model is configured from installer onboarding via `OPENCODE_MODEL`
 - OpenCode provider credentials from `/connect` are persisted in the mounted data directory
 - Mounted config/data/workspace directories are auto-owned by the `opencode` container user during install
-- `AGENTS.md` gives the instance a default personality; `~/nero/workspace/agents/.agents/SOUL.md` holds voice and values for the workspace by default
+- `AGENTS.md` gives the instance a default personality; `~/nero/workspace/.agents/SOUL.md` holds voice and values for the workspace by default
 - OpenCode permissions default to allow (no approval prompts); adjust `config/opencode/opencode.json` if you want stricter gates
 - SSL uses the Cloudflare DNS challenge, so certificate renewal stays automatic
