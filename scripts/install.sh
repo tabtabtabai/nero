@@ -533,11 +533,22 @@ prepare_runtime_dirs() {
   ${SUDO} chmod 755 "${TARGET_DIR}/data/opencode"
 }
 
-if [[ -f "${SOURCE_DIR}/.env" ]]; then
+load_env_file() {
+  local env_path="$1"
+
+  if [[ ! -f "${env_path}" ]]; then
+    return
+  fi
+
   set -a
-  . "${SOURCE_DIR}/.env"
+  . "${env_path}"
   set +a
+}
+
+if [[ "${SOURCE_DIR}" != "${TARGET_DIR}" ]]; then
+  load_env_file "${TARGET_DIR}/.env"
 fi
+load_env_file "${SOURCE_DIR}/.env"
 
 detect_proxy_mode
 
