@@ -261,7 +261,7 @@ The future admin service for integrations and permissions should be added as a s
 
 ## Notes
 
-- The container starts OpenCode in `/workspace/agents`
+- The container starts OpenCode in `/workspace`
 - The default model is configured from installer onboarding via `OPENCODE_MODEL`
 - OpenCode provider credentials from `/connect` are persisted in the mounted data directory
 - Mounted config/data/workspace directories are auto-owned by the `opencode` container user during install

@@ -29,7 +29,7 @@ COPY entrypoint.sh /usr/local/bin/nero-entrypoint
 RUN chmod +x /usr/local/bin/nero-entrypoint
 
 USER node
-WORKDIR /workspace/agents
+WORKDIR /workspace
 
 EXPOSE 4096
 
