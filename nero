@@ -20,6 +20,7 @@ Commands:
   doctor      Show deployment health and config summary
   install     Install or re-install Nero
   update      Fetch latest Nero and redeploy
+  sync-oc-worktrees  Register git worktrees in OpenCode sandboxes (host SQLite)
   help        Show this help
 EOF
 }
@@ -36,6 +37,10 @@ case "${COMMAND}" in
     ;;
   update)
     exec bash "${PROJECT_DIR}/scripts/update.sh"
+    ;;
+  sync-oc-worktrees)
+    shift
+    exec bash "${PROJECT_DIR}/scripts/oc-sync-worktrees.sh" "$@"
     ;;
   help|-h|--help)
     usage

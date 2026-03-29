@@ -136,7 +136,8 @@ compose_config_hash() {
     "${TARGET_DIR}/compose.yaml" \
     "${TARGET_DIR}/.env" \
     "${TARGET_DIR}/scripts/install.sh" \
-    "${TARGET_DIR}/scripts/run-opencode-host.sh"; do
+    "${TARGET_DIR}/scripts/run-opencode-host.sh" \
+    "${TARGET_DIR}/scripts/oc-sync-worktrees.sh"; do
     if [[ -f "${f}" ]]; then
       inputs+=("${f}")
     fi
@@ -213,6 +214,9 @@ cleanup_legacy_docker_opencode() {
 ensure_host_opencode_scripts_executable() {
   if [[ -f "${TARGET_DIR}/scripts/run-opencode-host.sh" ]]; then
     ${SUDO} chmod +x "${TARGET_DIR}/scripts/run-opencode-host.sh"
+  fi
+  if [[ -f "${TARGET_DIR}/scripts/oc-sync-worktrees.sh" ]]; then
+    ${SUDO} chmod +x "${TARGET_DIR}/scripts/oc-sync-worktrees.sh"
   fi
 }
 
