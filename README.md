@@ -72,6 +72,7 @@ The installer now also:
 - skips Nero Traefik automatically on boxes that already have another proxy
 - installs the `nero` command into `/usr/local/bin/nero`
 - prepares `gh`, git identity, and SSH material for GitHub workflows
+- runs a local host init script after VM dependencies are installed and the repo is synced
 - reuses values already present in `.env` instead of asking every time
 - writes shell-safe `.env` values so names with spaces do not break reinstall
 - deploys in place when run from a git clone, so `nero update` always tracks the real repo
@@ -251,6 +252,17 @@ The installer currently supports:
 - OpenAI API key
 - Anthropic
 - OpenRouter
+
+## Host init script
+
+Nero tracks `scripts/init-host.example.sh` and creates a local
+`scripts/init-host.local.sh` when you want machine-specific setup.
+
+- `scripts/init-host.local.sh` is gitignored, so VM-specific edits stay out of git
+- copy or rename `scripts/init-host.example.sh` to `scripts/init-host.local.sh` to enable it
+- it runs during `nero install` and `nero update` before containers are recreated
+- use it for machine-local setup that should happen after Docker and other VM deps are ready
+- Nero exports `TARGET_DIR`, `SOURCE_DIR`, and `PROJECT_NAME` to the script
 
 ## Domains
 

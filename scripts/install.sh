@@ -17,6 +17,7 @@ fi
 DEFAULT_MODEL="openai/gpt-5.4"
 OPENCODE_UID="1000"
 OPENCODE_GID="1000"
+INIT_SCRIPT_LOCAL_RELATIVE_PATH="scripts/init-host.local.sh"
 
 if [[ "${EUID}" -eq 0 ]]; then
   SUDO=""
@@ -431,6 +432,21 @@ EOF
   fi
 }
 
+run_init_script() {
+  local init_script="${TARGET_DIR}/${INIT_SCRIPT_LOCAL_RELATIVE_PATH}"
+
+  if [[ ! -f "${init_script}" ]]; then
+    return
+  fi
+
+  printf 'Running init script: %s\n' "${init_script}"
+  ${SUDO} env \
+    TARGET_DIR="${TARGET_DIR}" \
+    SOURCE_DIR="${SOURCE_DIR}" \
+    PROJECT_NAME="${PROJECT_NAME}" \
+    bash "${init_script}"
+}
+
 install_docker() {
   if need_cmd docker && docker compose version >/dev/null 2>&1; then
     if [[ -f /etc/os-release ]]; then
@@ -527,8 +543,8 @@ set_model_defaults
 prompt_yes_no ENABLE_GITHUB "Enable GitHub integration for repos and PRs? [Y/n]" "y"
 
 install_docker
-write_env_file
 sync_project
+write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
 resolve_git_identity
@@ -537,6 +553,7 @@ write_gitconfig
 apply_host_git_identity
 run_workspace_setup
 write_env_file
+run_init_script
 write_traefik_dynamic_config
 install_global_command
 

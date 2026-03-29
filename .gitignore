@@ -1,4 +1,5 @@
 .env
+scripts/init-host.local.sh
 data/
 /workspace/
 .config/
