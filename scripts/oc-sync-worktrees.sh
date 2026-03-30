@@ -6,71 +6,12 @@ set -euo pipefail
 _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 NERO_DIR="$(cd -- "${_SCRIPT_DIR}/.." && pwd)"
 
-# Override if your DB lives elsewhere: OPENCODE_DB=/path/to/opencode.db $0
-
-opencode_db_project_count() {
-  sqlite3 "$1" "SELECT COUNT(*) FROM project;" 2>/dev/null || printf '0'
-}
-
-opencode_db_add_candidate() {
-  local p=$1
-  [ -n "$p" ] || return 0
-  local c
-  for c in "${candidates[@]}"; do
-    [ "$c" = "$p" ] && return 0
-  done
-  candidates+=("$p")
-}
-
-candidates=()
-
-if [ -n "${OPENCODE_DB:-}" ]; then
-  DB="$OPENCODE_DB"
-else
-  opencode_db_add_candidate "${NERO_DIR}/data/opencode/opencode.db"
-  opencode_db_add_candidate "${NERO_DIR}/data/opencode/opencode/opencode.db"
-  opencode_db_add_candidate "${XDG_DATA_HOME:-$HOME/.local/share}/opencode/opencode.db"
-  if command -v opencode >/dev/null 2>&1; then
-    oc_path=$(opencode db path 2>/dev/null) || true
-    [ -n "${oc_path:-}" ] && opencode_db_add_candidate "$oc_path"
-  fi
-  [ -n "${OPENCODE_NERO_DIR:-}" ] && opencode_db_add_candidate "${OPENCODE_NERO_DIR}/data/opencode/opencode.db"
-  [ -n "${OPENCODE_NERO_DIR:-}" ] && opencode_db_add_candidate "${OPENCODE_NERO_DIR}/data/opencode/opencode/opencode.db"
-  for nero_root in "$HOME/nero/workspace/code/nero" "$HOME/workspace/code/nero" "/opt/nero"; do
-    if [ -f "$nero_root/scripts/run-opencode-host.sh" ]; then
-      opencode_db_add_candidate "$nero_root/data/opencode/opencode.db"
-      opencode_db_add_candidate "$nero_root/data/opencode/opencode/opencode.db"
-    fi
-  done
-
-  DB=""
-  best=-1
-  for p in "${candidates[@]}"; do
-    [ -f "$p" ] || continue
-    [ -s "$p" ] || continue
-    n=$(opencode_db_project_count "$p")
-    if [ "$n" -gt "$best" ]; then
-      best=$n
-      DB=$p
-    fi
-  done
-  if [ -z "$DB" ]; then
-    for p in "${candidates[@]}"; do
-      if [ -s "$p" ]; then
-        DB=$p
-        break
-      fi
-    done
-  fi
-  if [ -z "$DB" ]; then
-    DB="${candidates[0]}"
-  fi
-fi
+# Single source of truth: the Nero-managed OpenCode DB used by run-opencode-host.sh.
+DB="${NERO_DIR}/data/opencode/opencode/opencode.db"
 
 if [ ! -f "$DB" ]; then
   echo "error: opencode database not found at $DB" >&2
-  echo "hint: set OPENCODE_DB or OPENCODE_NERO_DIR (try .../data/opencode/opencode/opencode.db if .../opencode.db is empty)." >&2
-  echo "hint: run \`opencode db path\` in the same environment you use for OpenCode (CLI vs Nero systemd differs)." >&2
+  echo "hint: ensure Nero is installed and OpenCode has been started at least once." >&2
   exit 1
 fi
 
@@ -85,18 +26,6 @@ if [ -z "$rows" ]; then
   echo "table row counts:"
   sqlite3 -column -header "$DB" "SELECT 'project' AS tbl, COUNT(*) AS n FROM project UNION ALL SELECT 'workspace', COUNT(*) FROM workspace UNION ALL SELECT 'session', COUNT(*) FROM session;"
   echo "the .db file can be non-empty from schema alone; open a folder in OpenCode to create project rows."
-  if [ -z "${OPENCODE_DB:-}" ] && [ "${#candidates[@]}" -gt 1 ]; then
-    echo "other candidate databases (set OPENCODE_DB if the live data is elsewhere):"
-    for p in "${candidates[@]}"; do
-      [ -f "$p" ] || continue
-      if [ ! -s "$p" ]; then
-        printf '  %s  (empty file; ignored)\n' "$p"
-        continue
-      fi
-      printf '  %s  (%s projects)\n' "$p" "$(opencode_db_project_count "$p")"
-    done
-  fi
-  echo "override: OPENCODE_DB=/path/to/opencode.db $0"
   exit 0
 fi
 
