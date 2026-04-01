@@ -113,6 +113,7 @@ apt-get install -y --no-install-recommends \
   gh \
   git \
   gnupg \
+  jq \
   lsb-release \
   nano \
   openssl \
@@ -133,7 +134,7 @@ ufw --force enable
 install_oh_my_zsh "${TARGET_USER}" "${TARGET_HOME}"
 
 printf '\nUbuntu 24.04 bootstrap complete.\n'
-printf 'Installed: Docker Engine, Docker Compose plugin, gh, git, curl, rsync, nano, sqlite3, ufw, zsh, Oh My Zsh.\n'
+printf 'Installed: Docker Engine, Docker Compose plugin, gh, git, curl, jq, rsync, nano, sqlite3, ufw, zsh, Oh My Zsh.\n'
 printf 'Firewall: OpenSSH, 80/tcp, and 443/tcp allowed.\n'
 printf 'Next: curl -fsSL https://raw.githubusercontent.com/PatrickRogg/nero/main/scripts/install-remote.sh -o /tmp/install-remote.sh && bash /tmp/install-remote.sh\n'
 
