@@ -294,6 +294,7 @@ The future admin service for integrations and permissions should be added as a s
 - OpenCode data: `data/opencode/`
 - Traefik ACME data: `data/traefik/`
 - Agent workspace: `~/nero/workspace/` by default (`WORKSPACE_HOST_DIR` overrides it)
+- OpenCode-created git worktrees live under `WORKSPACE_HOST_DIR/.gv_workspaces/worktree` and are linked from `data/opencode/opencode/worktree`
 - Git worktrees vs OpenCode: run `nero sync-oc-worktrees` (runs `scripts/oc-sync-worktrees.sh` from the Nero install) to register linked git worktrees in OpenCode’s `sandboxes` list in SQLite (`data/opencode/opencode/opencode.db` under the install dir when present).
 
 ## OpenCode versioning

@@ -410,6 +410,23 @@ initialize_workspace_structure() {
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${workspace_root}"
 }
 
+configure_opencode_worktree_root() {
+  local worktree_root="${WORKSPACE_HOST_DIR}/.gv_workspaces/worktree"
+  local opencode_worktree_dir="${TARGET_DIR}/data/opencode/opencode/worktree"
+
+  ${SUDO} mkdir -p "${WORKSPACE_HOST_DIR}/.gv_workspaces" "${worktree_root}"
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${WORKSPACE_HOST_DIR}/.gv_workspaces"
+
+  if [[ -d "${opencode_worktree_dir}" && ! -L "${opencode_worktree_dir}" ]]; then
+    ${SUDO} cp -a "${opencode_worktree_dir}/." "${worktree_root}/" 2>/dev/null || true
+    ${SUDO} rm -rf "${opencode_worktree_dir}"
+  fi
+
+  ${SUDO} mkdir -p "$(dirname "${opencode_worktree_dir}")"
+  ${SUDO} ln -sfn "${worktree_root}" "${opencode_worktree_dir}"
+  ${SUDO} chown -h "${OPENCODE_UID}:${OPENCODE_GID}" "${opencode_worktree_dir}"
+}
+
 prompt_yes_no() {
   local var_name="$1"
   local prompt_text="$2"
@@ -786,6 +803,7 @@ ensure_host_opencode_scripts_executable
 write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
+configure_opencode_worktree_root
 resolve_git_identity
 setup_github_auth
 write_gitconfig
