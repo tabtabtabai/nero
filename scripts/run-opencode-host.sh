@@ -14,8 +14,12 @@ set -a
 . "${ENV_FILE}"
 set +a
 
-export XDG_CONFIG_HOME="${NERO_DIR}/config"
-export XDG_DATA_HOME="${NERO_DIR}/data/opencode"
+OPENCODE_HOME_DIR="${OPENCODE_HOME_DIR:-${HOME}/.opencode}"
+
+export XDG_CONFIG_HOME="${OPENCODE_HOME_DIR}/config"
+export XDG_DATA_HOME="${OPENCODE_HOME_DIR}/data"
+export XDG_STATE_HOME="${OPENCODE_HOME_DIR}/state"
+export XDG_CACHE_HOME="${OPENCODE_HOME_DIR}/cache"
 export GH_CONFIG_DIR="${NERO_DIR}/config/gh"
 export GIT_CONFIG_GLOBAL="${NERO_DIR}/config/git/.gitconfig"
 
