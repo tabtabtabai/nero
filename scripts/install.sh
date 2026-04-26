@@ -439,43 +439,17 @@ initialize_workspace_structure() {
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${workspace_root}"
 }
 
-migrate_opencode_state() {
-  local legacy_config_dir="${TARGET_DIR}/config/opencode"
-  local legacy_data_dir="${TARGET_DIR}/data/opencode"
-  local opencode_config_dir="${OPENCODE_XDG_CONFIG_HOME}/opencode"
-
-  ${SUDO} mkdir -p \
-    "${OPENCODE_XDG_CONFIG_HOME}" \
-    "${OPENCODE_XDG_DATA_HOME}" \
-    "${OPENCODE_XDG_STATE_HOME}" \
-    "${OPENCODE_XDG_CACHE_HOME}" \
-    "${OPENCODE_WORKTREE_ROOT}"
-
-  if [[ -d "${legacy_config_dir}" && ! -e "${opencode_config_dir}" ]]; then
-    ${SUDO} mkdir -p "${OPENCODE_XDG_CONFIG_HOME}"
-    ${SUDO} cp -a "${legacy_config_dir}" "${opencode_config_dir}"
-    ${SUDO} rm -rf "${legacy_config_dir}"
-  fi
-
-  if [[ -d "${legacy_data_dir}" && ! -e "${OPENCODE_XDG_DATA_HOME}/opencode" ]]; then
-    ${SUDO} cp -a "${legacy_data_dir}/." "${OPENCODE_XDG_DATA_HOME}/"
-    ${SUDO} rm -rf "${legacy_data_dir}"
-  fi
-
-  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
-}
-
 configure_opencode_worktree_root() {
   local worktree_root="${OPENCODE_WORKTREE_ROOT}"
   local opencode_worktree_dir="${OPENCODE_XDG_DATA_HOME}/opencode/worktree"
 
-  ${SUDO} mkdir -p "${worktree_root}" "$(dirname "${opencode_worktree_dir}")"
-  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${worktree_root}"
-
-  if [[ -d "${opencode_worktree_dir}" && ! -L "${opencode_worktree_dir}" ]]; then
-    ${SUDO} cp -a "${opencode_worktree_dir}/." "${worktree_root}/" 2>/dev/null || true
-    ${SUDO} rm -rf "${opencode_worktree_dir}"
-  fi
+  ${SUDO} mkdir -p \
+    "${OPENCODE_XDG_CONFIG_HOME}/opencode" \
+    "${OPENCODE_XDG_DATA_HOME}/opencode" \
+    "${OPENCODE_XDG_STATE_HOME}" \
+    "${OPENCODE_XDG_CACHE_HOME}" \
+    "${worktree_root}"
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
 
   ${SUDO} ln -sfn "${worktree_root}" "${opencode_worktree_dir}"
   ${SUDO} chown -h "${OPENCODE_UID}:${OPENCODE_GID}" "${opencode_worktree_dir}"
@@ -855,7 +829,6 @@ ensure_host_opencode_scripts_executable
 write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
-migrate_opencode_state
 configure_opencode_worktree_root
 resolve_git_identity
 setup_github_auth
