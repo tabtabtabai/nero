@@ -92,7 +92,6 @@ nero/
   compose.yaml
   .env.example
   AGENTS.md
-  config/opencode/opencode.json
   scripts/
     run-opencode-host.sh
     bootstrap-ubuntu-24.sh
@@ -102,6 +101,8 @@ nero/
   templates/workspace/
   # agent workspace is created in the installing user's home directory
 ```
+
+OpenCode user state is stored outside the repo under `~/.opencode/` by default.
 
 ## Fresh Ubuntu 24 VM
 
@@ -290,11 +291,13 @@ The future admin service for integrations and permissions should be added as a s
 
 ## Persistence
 
-- OpenCode config: `config/opencode/`
-- OpenCode data: `data/opencode/`
+- OpenCode home: `~/.opencode/` by default (`OPENCODE_HOME_DIR` overrides it)
+- OpenCode config: `~/.opencode/config/opencode/`
+- OpenCode data: `~/.opencode/data/opencode/`
+- OpenCode worktrees: `~/.opencode/worktree/` (linked from `~/.opencode/data/opencode/worktree` for OpenCode compatibility)
 - Traefik ACME data: `data/traefik/`
 - Agent workspace: `~/nero/workspace/` by default (`WORKSPACE_HOST_DIR` overrides it)
-- Git worktrees vs OpenCode: run `nero sync-oc-worktrees` (runs `scripts/oc-sync-worktrees.sh` from the Nero install) to register linked git worktrees in OpenCode’s `sandboxes` list in SQLite (`data/opencode/opencode/opencode.db` under the install dir when present).
+- Git worktrees vs OpenCode: run `nero sync-oc-worktrees` (runs `scripts/oc-sync-worktrees.sh` from the Nero install) to register linked git worktrees in OpenCode’s `sandboxes` list in SQLite (`~/.opencode/data/opencode/opencode.db` under the default layout).
 
 ## OpenCode versioning
 
@@ -308,8 +311,8 @@ The future admin service for integrations and permissions should be added as a s
 - OpenCode runs under `systemd` with `WorkingDirectory` set to `WORKSPACE_HOST_DIR` (same tree the installer chowns to `OPENCODE_UID`, default `1000`)
 - In `self` mode, OpenCode listens on `0.0.0.0:${OPENCODE_BIND_PORT:-4096}` on the **host** (systemd `nero-opencode.service`), not in Docker. Traefik reaches it at `host.docker.internal` / the Docker bridge. If **UFW** is enabled, the installer adds a rule so the `NERO_EDGE_NETWORK` subnet can reach that port (otherwise HTTPS works but the UI returns bad gateway).
 - The default model is configured from installer onboarding via `OPENCODE_MODEL`
-- OpenCode provider credentials from `/connect` are persisted under `data/opencode`
+- OpenCode provider credentials from `/connect` are persisted under `~/.opencode/data/opencode` by default
 - Config, data, and workspace directories are auto-owned by `OPENCODE_UID` during install
 - `AGENTS.md` gives the instance a default personality; `~/nero/workspace/.agents/SOUL.md` holds voice and values for the workspace by default
-- OpenCode permissions default to allow (no approval prompts); adjust `config/opencode/opencode.json` if you want stricter gates
+- OpenCode permissions default to allow (no approval prompts); adjust `~/.opencode/config/opencode/opencode.json` if you want stricter gates
 - SSL uses the Cloudflare DNS challenge, so certificate renewal stays automatic

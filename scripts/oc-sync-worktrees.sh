@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 # Register git worktrees as OpenCode sandboxes for every row in the OpenCode project table.
-# Shipped with Nero; host OpenCode data lives under $NERO_DIR/data/opencode (run-opencode-host.sh).
+# Shipped with Nero; host OpenCode data lives under $OPENCODE_HOME_DIR (run-opencode-host.sh).
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 NERO_DIR="$(cd -- "${_SCRIPT_DIR}/.." && pwd)"
+ENV_FILE="${NERO_DIR}/.env"
 
-# Single source of truth: the Nero-managed OpenCode DB used by run-opencode-host.sh.
-DB="${NERO_DIR}/data/opencode/opencode/opencode.db"
+if [[ -f "${ENV_FILE}" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "${ENV_FILE}"
+  set +a
+fi
+
+OPENCODE_HOME_DIR="${OPENCODE_HOME_DIR:-${HOME}/.opencode}"
+
+# Single source of truth: the OpenCode DB used by run-opencode-host.sh.
+DB="${OPENCODE_HOME_DIR}/data/opencode/opencode.db"
 
 if [ ! -f "$DB" ]; then
   echo "error: opencode database not found at $DB" >&2

@@ -56,6 +56,35 @@ resolve_workspace_host_dir() {
   WORKSPACE_HOST_DIR="${install_home}/nero/workspace"
 }
 
+resolve_opencode_home_dir() {
+  if [[ -n "${OPENCODE_HOME_DIR:-}" ]]; then
+    return
+  fi
+
+  local opencode_home=""
+  if [[ -n "${OPENCODE_UID:-}" ]]; then
+    opencode_home="$(getent passwd "${OPENCODE_UID}" 2>/dev/null | cut -d: -f6 || true)"
+  fi
+
+  if [[ -z "${opencode_home}" ]]; then
+    opencode_home="${HOME:-}"
+  fi
+
+  if [[ -z "${opencode_home}" ]]; then
+    opencode_home="/root"
+  fi
+
+  OPENCODE_HOME_DIR="${opencode_home}/.opencode"
+}
+
+resolve_opencode_paths() {
+  OPENCODE_XDG_CONFIG_HOME="${OPENCODE_HOME_DIR}/config"
+  OPENCODE_XDG_DATA_HOME="${OPENCODE_HOME_DIR}/data"
+  OPENCODE_XDG_STATE_HOME="${OPENCODE_HOME_DIR}/state"
+  OPENCODE_XDG_CACHE_HOME="${OPENCODE_HOME_DIR}/cache"
+  OPENCODE_WORKTREE_ROOT="${OPENCODE_HOME_DIR}/worktree"
+}
+
 # Set OPENCODE_UID/GID from a passwd name or uid that actually exists (getent).
 _opencode_try_uid_pair() {
   local want="$1"
@@ -410,6 +439,22 @@ initialize_workspace_structure() {
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${workspace_root}"
 }
 
+configure_opencode_worktree_root() {
+  local worktree_root="${OPENCODE_WORKTREE_ROOT}"
+  local opencode_worktree_dir="${OPENCODE_XDG_DATA_HOME}/opencode/worktree"
+
+  ${SUDO} mkdir -p \
+    "${OPENCODE_XDG_CONFIG_HOME}/opencode" \
+    "${OPENCODE_XDG_DATA_HOME}/opencode" \
+    "${OPENCODE_XDG_STATE_HOME}" \
+    "${OPENCODE_XDG_CACHE_HOME}" \
+    "${worktree_root}"
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
+
+  ${SUDO} ln -sfn "${worktree_root}" "${opencode_worktree_dir}"
+  ${SUDO} chown -h "${OPENCODE_UID}:${OPENCODE_GID}" "${opencode_worktree_dir}"
+}
+
 prompt_yes_no() {
   local var_name="$1"
   local prompt_text="$2"
@@ -597,6 +642,7 @@ CF_DNS_API_TOKEN=$(shell_escape "${CF_DNS_API_TOKEN}")
 OPENCODE_SERVER_USERNAME=$(shell_escape "${OPENCODE_SERVER_USERNAME:-opencode}")
 OPENCODE_SERVER_PASSWORD=$(shell_escape "${OPENCODE_SERVER_PASSWORD}")
 OPENCODE_MODEL=$(shell_escape "${OPENCODE_MODEL}")
+OPENCODE_HOME_DIR=$(shell_escape "${OPENCODE_HOME_DIR}")
 GIT_USER_NAME=$(shell_escape "${GIT_USER_NAME:-}")
 GIT_USER_EMAIL=$(shell_escape "${GIT_USER_EMAIL:-}")
 
@@ -698,9 +744,7 @@ prepare_runtime_dirs() {
   ${SUDO} mkdir -p \
     "${TARGET_DIR}/config/gh" \
     "${TARGET_DIR}/config/git" \
-    "${TARGET_DIR}/config/opencode" \
     "${TARGET_DIR}/config/ssh" \
-    "${TARGET_DIR}/data/opencode" \
     "${TARGET_DIR}/data/traefik" \
     "${TARGET_DIR}/traefik/dynamic" \
     "${WORKSPACE_HOST_DIR}"
@@ -716,12 +760,9 @@ prepare_runtime_dirs() {
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" \
     "${TARGET_DIR}/config/gh" \
     "${TARGET_DIR}/config/git" \
-    "${TARGET_DIR}/config/opencode" \
     "${TARGET_DIR}/config/ssh" \
-    "${TARGET_DIR}/data/opencode" \
     "${WORKSPACE_HOST_DIR}"
   ${SUDO} chmod 700 "${TARGET_DIR}/config/ssh"
-  ${SUDO} chmod 755 "${TARGET_DIR}/data/opencode"
 }
 
 load_env_file() {
@@ -743,6 +784,8 @@ load_env_file "${SOURCE_DIR}/.env"
 
 resolve_workspace_host_dir
 resolve_opencode_ids
+resolve_opencode_home_dir
+resolve_opencode_paths
 detect_proxy_mode
 
 if [[ "${NERO_REMOTE_COMMAND:-}" == "update" ]]; then
@@ -786,6 +829,7 @@ ensure_host_opencode_scripts_executable
 write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
+configure_opencode_worktree_root
 resolve_git_identity
 setup_github_auth
 write_gitconfig
@@ -813,6 +857,7 @@ Proxy mode: ${TRAEFIK_MODE}
 
 Project dir: ${TARGET_DIR}
 Workspace dir: ${WORKSPACE_HOST_DIR}
+OpenCode home: ${OPENCODE_HOME_DIR}
 Command: nero
 Git author: ${GIT_USER_NAME} <${GIT_USER_EMAIL}>
 

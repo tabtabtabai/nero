@@ -16,6 +16,7 @@ if [[ -f "${PROJECT_DIR}/.env" ]]; then
 fi
 
 WORKSPACE_ROOT="${WORKSPACE_HOST_DIR:-${PROJECT_DIR}/workspace}"
+OPENCODE_HOME_ROOT="${OPENCODE_HOME_DIR:-${HOME}/.opencode}"
 
 compose_config_hash() {
   local -a inputs=()
@@ -60,6 +61,7 @@ printf 'Domain: %s\n' "${OPENCODE_DOMAIN:-unset}"
 printf 'Bind port: %s\n' "${OPENCODE_BIND_PORT:-4096}"
 printf 'Edge network: %s\n' "${NERO_EDGE_NETWORK:-nero-edge}"
 printf 'Workspace dir: %s\n' "${WORKSPACE_ROOT}"
+printf 'OpenCode home: %s\n' "${OPENCODE_HOME_ROOT}"
 
 stamp_path="${PROJECT_DIR}/data/.nero-compose-signature"
 current_hash="$(compose_config_hash)"

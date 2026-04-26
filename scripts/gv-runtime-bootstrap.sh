@@ -27,8 +27,12 @@ if [[ -z "${GV_VM_HOME}" ]]; then
 fi
 
 export GV_VM_USER GV_VM_HOME
-export XDG_CONFIG_HOME="${NERO_DIR}/config"
-export XDG_DATA_HOME="${NERO_DIR}/data/opencode"
+OPENCODE_HOME_DIR="${OPENCODE_HOME_DIR:-${GV_VM_HOME}/.opencode}"
+
+export XDG_CONFIG_HOME="${OPENCODE_HOME_DIR}/config"
+export XDG_DATA_HOME="${OPENCODE_HOME_DIR}/data"
+export XDG_STATE_HOME="${OPENCODE_HOME_DIR}/state"
+export XDG_CACHE_HOME="${OPENCODE_HOME_DIR}/cache"
 
 mkdir -p /etc/gv
 printf 'GV_ENVIRONMENT=1\n' > /etc/gv/environment
@@ -39,11 +43,12 @@ chown "${GV_VM_USER}:${GV_VM_USER}" "${GV_VM_HOME}/.claude.json" 2>/dev/null || 
 NPM_ROOT="$(npm root -g)"
 command -v devcontainer >/dev/null 2>&1 || npm i -g @devcontainers/cli
 test -d "${NPM_ROOT}/@opencode-ai/plugin" || npm i -g @opencode-ai/plugin
-ln -sfn "${NPM_ROOT}/@opencode-ai/plugin" "${NERO_DIR}/config/opencode/node_modules/@opencode-ai/plugin"
+install -d -m 755 -o "${GV_VM_USER}" -g "${GV_VM_USER}" "${XDG_CONFIG_HOME}/opencode/node_modules/@opencode-ai"
+ln -sfn "${NPM_ROOT}/@opencode-ai/plugin" "${XDG_CONFIG_HOME}/opencode/node_modules/@opencode-ai/plugin"
 
 chmod 755 /opt /opt/nero "${NERO_DIR}/scripts" || true
 if getent group docker >/dev/null 2>&1; then usermod -aG docker "${GV_VM_USER}"; fi
-chown -R 1000:1000 "${NERO_DIR}/config" "${NERO_DIR}/data/opencode" "${GV_VM_HOME}/.config" "${GV_VM_HOME}/workspace" 2>/dev/null || true
+chown -R 1000:1000 "${NERO_DIR}/config" "${OPENCODE_HOME_DIR}" "${GV_VM_HOME}/.config" "${GV_VM_HOME}/workspace" 2>/dev/null || true
 
 install -d -m 755 -o "${GV_VM_USER}" -g "${GV_VM_USER}" "${GV_VM_HOME}/.npm"
 chown -R "${GV_VM_USER}:${GV_VM_USER}" "${GV_VM_HOME}/.npm" || true
