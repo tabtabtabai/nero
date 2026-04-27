@@ -63,7 +63,7 @@ trap cleanup EXIT
 
 printf '%s Nero from %s (%s)\n' "$( [[ "${COMMAND}" == "update" ]] && printf 'Updating' || printf 'Installing' )" "${REPO_SLUG}" "${REF}"
 if [[ "${COMMAND}" == "update" ]]; then
-  printf 'Update will refresh Traefik, bump the host opencode-ai package (OPENCODE_CLI_VERSION in .env), and restart nero-opencode.\n'
+  printf 'Update will refresh Traefik, bump the host OpenCode package (OPENCODE_CLI_PACKAGE/OPENCODE_CLI_VERSION in .env), and restart nero-opencode.\n'
 fi
 printf 'Preparing interactive installer...\n'
 
