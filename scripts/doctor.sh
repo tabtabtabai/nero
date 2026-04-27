@@ -41,7 +41,23 @@ get_latest_opencode_version() {
   if ! command -v npm >/dev/null 2>&1; then
     return 1
   fi
-  npm view opencode-ai version 2>/dev/null
+  local pkg="${OPENCODE_CLI_PACKAGE:-opencode-ai}"
+  if [[ "${pkg}" == @tabtabtabai/* && -n "${OPENCODE_NPM_TOKEN:-}" ]]; then
+    local npmrc
+    npmrc="$(mktemp)"
+    chmod 600 "${npmrc}"
+    cat >"${npmrc}" <<EOF
+@tabtabtabai:registry=${OPENCODE_NPM_REGISTRY:-https://npm.pkg.github.com}
+//npm.pkg.github.com/:_authToken=${OPENCODE_NPM_TOKEN}
+EOF
+    if ! NPM_CONFIG_USERCONFIG="${npmrc}" npm view "${pkg}" version 2>/dev/null; then
+      rm -f "${npmrc}"
+      return 1
+    fi
+    rm -f "${npmrc}"
+    return
+  fi
+  npm view "${pkg}" version 2>/dev/null
 }
 
 read_compose_stamp() {

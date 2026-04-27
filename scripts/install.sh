@@ -326,8 +326,32 @@ install_opencode_cli_global() {
   ensure_nodejs
   ensure_jq
   ensure_sqlite3
-  local ver="${OPENCODE_CLI_VERSION:-latest}"
-  ${SUDO} npm install -g --no-fund --no-audit "opencode-ai@${ver}"
+  local pkg="${OPENCODE_CLI_PACKAGE:-opencode-ai}"
+  local ver="${OPENCODE_CLI_VERSION:-${OPENCODE_VERSION:-latest}}"
+  local registry="${OPENCODE_NPM_REGISTRY:-https://npm.pkg.github.com}"
+
+  if [[ "${pkg}" == @tabtabtabai/* ]]; then
+    if [[ -z "${OPENCODE_NPM_TOKEN:-}" ]]; then
+      printf 'OPENCODE_NPM_TOKEN is required to install %s from GitHub Packages.\n' "${pkg}" >&2
+      exit 1
+    fi
+
+    local npmrc
+    npmrc="$(mktemp)"
+    chmod 600 "${npmrc}"
+    cat >"${npmrc}" <<EOF
+@tabtabtabai:registry=${registry}
+//npm.pkg.github.com/:_authToken=${OPENCODE_NPM_TOKEN}
+EOF
+    if ! ${SUDO} env NPM_CONFIG_USERCONFIG="${npmrc}" npm install -g --no-fund --no-audit "${pkg}@${ver}"; then
+      rm -f "${npmrc}"
+      return 1
+    fi
+    rm -f "${npmrc}"
+    return
+  fi
+
+  ${SUDO} npm install -g --no-fund --no-audit "${pkg}@${ver}"
 }
 
 install_opencode_systemd() {
@@ -653,7 +677,10 @@ OPENROUTER_API_KEY=$(shell_escape "${OPENROUTER_API_KEY:-}")
 GITHUB_TOKEN=$(shell_escape "${GITHUB_TOKEN:-}")
 LOCAL_ENDPOINT=$(shell_escape "${LOCAL_ENDPOINT:-}")
 WORKSPACE_HOST_DIR=$(shell_escape "${WORKSPACE_HOST_DIR}")
+OPENCODE_CLI_PACKAGE=$(shell_escape "${OPENCODE_CLI_PACKAGE:-opencode-ai}")
 OPENCODE_CLI_VERSION=$(shell_escape "${OPENCODE_CLI_VERSION:-latest}")
+OPENCODE_NPM_REGISTRY=$(shell_escape "${OPENCODE_NPM_REGISTRY:-https://npm.pkg.github.com}")
+OPENCODE_NPM_TOKEN=$(shell_escape "${OPENCODE_NPM_TOKEN:-}")
 OPENCODE_BIND_ADDR=$(shell_escape "${OPENCODE_BIND_ADDR}")
 OPENCODE_UID=$(shell_escape "${OPENCODE_UID}")
 OPENCODE_GID=$(shell_escape "${OPENCODE_GID}")
@@ -809,7 +836,9 @@ fi
 OPENCODE_SERVER_USERNAME="${OPENCODE_SERVER_USERNAME:-opencode}"
 TZ="${TZ:-UTC}"
 OPENCODE_BIND_PORT="${OPENCODE_BIND_PORT:-4096}"
-OPENCODE_CLI_VERSION="${OPENCODE_CLI_VERSION:-latest}"
+OPENCODE_CLI_PACKAGE="${OPENCODE_CLI_PACKAGE:-opencode-ai}"
+OPENCODE_CLI_VERSION="${OPENCODE_CLI_VERSION:-${OPENCODE_VERSION:-latest}}"
+OPENCODE_NPM_REGISTRY="${OPENCODE_NPM_REGISTRY:-https://npm.pkg.github.com}"
 if [[ -z "${OPENCODE_BIND_ADDR:-}" ]]; then
   case "${TRAEFIK_MODE}" in
     self)
