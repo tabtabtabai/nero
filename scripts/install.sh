@@ -82,7 +82,7 @@ resolve_opencode_paths() {
   OPENCODE_XDG_DATA_HOME="${OPENCODE_HOME_DIR}/data"
   OPENCODE_XDG_STATE_HOME="${OPENCODE_HOME_DIR}/state"
   OPENCODE_XDG_CACHE_HOME="${OPENCODE_HOME_DIR}/cache"
-  OPENCODE_WORKTREE_ROOT="${OPENCODE_HOME_DIR}/worktree"
+  OPENCODE_WORKTREE_ROOT="${OPENCODE_XDG_DATA_HOME}/opencode/worktree"
 }
 
 # Set OPENCODE_UID/GID from a passwd name or uid that actually exists (getent).
@@ -465,7 +465,6 @@ initialize_workspace_structure() {
 
 configure_opencode_worktree_root() {
   local worktree_root="${OPENCODE_WORKTREE_ROOT}"
-  local opencode_worktree_dir="${OPENCODE_XDG_DATA_HOME}/opencode/worktree"
 
   ${SUDO} mkdir -p \
     "${OPENCODE_XDG_CONFIG_HOME}/opencode" \
@@ -473,10 +472,8 @@ configure_opencode_worktree_root() {
     "${OPENCODE_XDG_STATE_HOME}" \
     "${OPENCODE_XDG_CACHE_HOME}" \
     "${worktree_root}"
-  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
 
-  ${SUDO} ln -sfn "${worktree_root}" "${opencode_worktree_dir}"
-  ${SUDO} chown -h "${OPENCODE_UID}:${OPENCODE_GID}" "${opencode_worktree_dir}"
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
 }
 
 prompt_yes_no() {
