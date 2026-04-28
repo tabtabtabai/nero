@@ -476,6 +476,17 @@ configure_opencode_worktree_root() {
   ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${OPENCODE_HOME_DIR}"
 }
 
+configure_opencode_config() {
+  local source_config="${TARGET_DIR}/config/opencode"
+  local runtime_config="${OPENCODE_XDG_CONFIG_HOME}/opencode"
+
+  ${SUDO} mkdir -p "${runtime_config}"
+  if [[ -d "${source_config}" ]]; then
+    ${SUDO} cp -a --update=none "${source_config}/." "${runtime_config}/"
+  fi
+  ${SUDO} chown -R "${OPENCODE_UID}:${OPENCODE_GID}" "${runtime_config}"
+}
+
 prompt_yes_no() {
   local var_name="$1"
   local prompt_text="$2"
@@ -856,6 +867,7 @@ write_env_file
 prepare_runtime_dirs
 initialize_workspace_structure
 configure_opencode_worktree_root
+configure_opencode_config
 resolve_git_identity
 setup_github_auth
 write_gitconfig
